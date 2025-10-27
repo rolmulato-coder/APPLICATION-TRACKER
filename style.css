@@ -1,26 +1,131 @@
-:root{--bg:#f7f8fb;--card:#ffffff;--accent:#2563eb;--muted:#6b7280}
-*{box-sizing:border-box}
-body{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:var(--bg);color:#111}
-.site-header{background:linear-gradient(90deg,#eef2ff,#fff);padding:28px 16px;text-align:center;border-bottom:1px solid #e6e9f2}
-.site-header h1{margin:0;font-size:1.6rem}
-.container{max-width:980px;margin:20px auto;padding:0 16px;display:grid;grid-template-columns:1fr;gap:18px}
-.card{background:var(--card);padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(17,24,39,0.06)}
-.field-row{display:flex;gap:8px}
-.field-row input{flex:1;padding:10px;border-radius:8px;border:1px solid #e5e7eb}
-.field-row button{padding:10px 12px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer}
-.portal-links a{display:inline-block;margin-right:8px;padding:8px 10px;border-radius:8px;text-decoration:none;border:1px solid #e6e9f2}
-.hidden{display:none}
-.job-form{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
-.job-form input,.job-form select{padding:8px;border-radius:8px;border:1px solid #e5e7eb}
-.job-form button{padding:8px 12px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer}
-.search-row{display:flex;gap:8px;margin-bottom:10px}
-.search-row input{flex:1;padding:8px;border-radius:8px;border:1px solid #e5e7eb}
-.jobs-table{width:100%;border-collapse:collapse}
-.jobs-table th, .jobs-table td{padding:8px;border-bottom:1px solid #f1f5f9;text-align:left}
-.jobs-table tr:nth-child(even){background:#fbfdff}
-.muted{color:var(--muted)}
-.site-footer{text-align:center;padding:12px 0;color:var(--muted)}
-.actions-btn{margin-right:6px;padding:6px 8px;border-radius:6px;border:none;cursor:pointer}
-.btn-edit{background:#f59e0b;color:#fff}
-.btn-delete{background:#ef4444;color:#fff}
-@media(min-width:820px){.container{grid-template-columns:1fr 1fr}}
+const API = 'YOUR_WEB_APP_URL'; // e.g. https://script.google.com/macros/s/AKfycbx.../exec
+
+// Elements
+const appForm = document.getElementById('appForm');
+const idField = document.getElementById('id');
+const dateApplied = document.getElementById('dateApplied');
+const jobTitle = document.getElementById('jobTitle');
+const company = document.getElementById('company');
+const platform = document.getElementById('platform');
+const status = document.getElementById('status');
+const link = document.getElementById('link');
+const appsTableBody = document.querySelector('#appsTable tbody');
+const search = document.getElementById('search');
+const filterStatus = document.getElementById('filterStatus');
+
+let items = [];
+
+// Fetch list from Sheets
+async function fetchList(){
+  try{
+    const res = await fetch(API + '?action=list');
+    const data = await res.json();
+    items = Array.isArray(data) ? data : [];
+    renderTable();
+  }catch(err){
+    console.error('Fetch error', err);
+    alert('Unable to load data from Google Sheets. Check your Web App URL and deployment permissions.');
+  }
+}
+
+function renderTable(){
+  const q = (search.value || '').toLowerCase();
+  const f = filterStatus.value;
+  appsTableBody.innerHTML = '';
+  items
+    .filter(it=>{
+      if(f && (it['Status']||'') !== f) return false;
+      if(!q) return true;
+      return (it['Job Title']||'').toLowerCase().includes(q) ||
+             (it['Company / Client']||'').toLowerCase().includes(q) ||
+             (it['Platform']||'').toLowerCase().includes(q);
+    })
+    .sort((a,b)=> (b['ID']||0) - (a['ID']||0))
+    .forEach(it=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${it['Date Applied']||''}</td>
+        <td>${escapeHtml(it['Job Title']||'')}</td>
+        <td>${escapeHtml(it['Company / Client']||'')}</td>
+        <td>${escapeHtml(it['Platform']||'')}</td>
+        <td>${escapeHtml(it['Status']||'')}</td>
+        <td>${it['Link'] ? `<a href="${escapeAttr(it['Link'])}" target="_blank">Open</a>` : ''}</td>
+        <td></td>
+      `;
+      const actionsTd = tr.querySelector('td:last-child');
+      const editBtn = document.createElement('button'); editBtn.className='actions-btn btn-edit'; editBtn.textContent='Edit';
+      const delBtn = document.createElement('button'); delBtn.className='actions-btn btn-delete'; delBtn.textContent='Delete';
+      editBtn.addEventListener('click', ()=> startEdit(it));
+      delBtn.addEventListener('click', ()=> doDelete(it['ID']));
+      actionsTd.appendChild(editBtn); actionsTd.appendChild(delBtn);
+      appsTableBody.appendChild(tr);
+    });
+}
+
+function startEdit(item){
+  idField.value = item['ID'] || '';
+  dateApplied.value = item['Date Applied'] || '';
+  jobTitle.value = item['Job Title'] || '';
+  company.value = item['Company / Client'] || '';
+  platform.value = item['Platform'] || '';
+  status.value = item['Status'] || 'Applied';
+  link.value = item['Link'] || '';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+appForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const payload = {
+    id: idField.value || undefined,
+    'Date Applied': dateApplied.value,
+    'Job Title': jobTitle.value,
+    'Company / Client': company.value,
+    'Platform': platform.value,
+    'Status': status.value,
+    'Link': link.value
+  };
+
+  try{
+    if(payload.id){
+      const res = await fetch(API + '?action=update', {
+        method:'POST',
+        body: JSON.stringify(payload),
+        headers: {'Content-Type':'application/json'}
+      });
+      const j = await res.json();
+      if(j.success) { await fetchList(); appForm.reset(); }
+      else alert('Update error: ' + (j.error||'unknown'));
+    } else {
+      const res = await fetch(API + '?action=add', {
+        method:'POST',
+        body: JSON.stringify(payload),
+        headers: {'Content-Type':'application/json'}
+      });
+      const j = await res.json();
+      if(j.success){ await fetchList(); appForm.reset(); }
+      else alert('Add error: ' + (j.error||'unknown'));
+    }
+  }catch(err){
+    console.error(err); alert('Network error');
+  }
+});
+
+async function doDelete(id){
+  if(!confirm('Delete this entry?')) return;
+  try{
+    const res = await fetch(API + '?action=delete&id=' + encodeURIComponent(id));
+    const j = await res.json();
+    if(j.success) await fetchList();
+    else alert('Delete error: ' + (j.error||'unknown'));
+  }catch(err){ console.error(err); alert('Network error'); }
+}
+
+document.getElementById('resetBtn').addEventListener('click', ()=> appForm.reset());
+search.addEventListener('input', renderTable);
+filterStatus.addEventListener('change', renderTable);
+
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function escapeAttr(s){ return String(s).replace(/"/g,'&quot;'); }
+
+// initialize
+fetchList();
