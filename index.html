@@ -3,81 +3,83 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Job Application Tracker</title>
+  <title>Job Tracker</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="site-header">
     <h1>Job Application Tracker</h1>
-    <p>Keep your job search organized — email, portals, and application tracker in one place.</p>
+    <p>Data stored in Google Sheets</p>
   </header>
 
   <main class="container">
-    <section class="card" id="email-section">
-      <h2>Email</h2>
-      <p>Add a contact email you use for job hunting.</p>
-      <div class="field-row">
-        <input id="emailInput" type="email" placeholder="you@example.com" />
-        <button id="saveEmailBtn">Save Email</button>
-      </div>
-      <p class="muted">Saved email: <span id="savedEmail">(none)</span></p>
-    </section>
-
-    <section class="card" id="portal-section">
-      <h2>Online Job Portal</h2>
-      <p>Quick links to job portals you use.</p>
-      <div id="portalLinks" class="portal-links">
-        <a href="https://www.linkedin.com/jobs/" target="_blank" rel="noopener">LinkedIn Jobs</a>
-        <a href="https://www.indeed.com/" target="_blank" rel="noopener">Indeed</a>
-        <a href="#" id="addPortalBtn">+ Add portal</a>
-      </div>
-      <div id="addPortalForm" class="hidden">
-        <input id="portalName" placeholder="Portal name" />
-        <input id="portalUrl" placeholder="https://example.com/jobs" />
-        <button id="savePortalBtn">Add</button>
-        <button id="cancelPortalBtn">Cancel</button>
-      </div>
-    </section>
-
-    <section class="card" id="tracker-section">
-      <h2>Job Application Tracker</h2>
-      <form id="jobForm" class="job-form">
-        <input id="company" placeholder="Company" required />
-        <input id="role" placeholder="Role / Title" required />
-        <input id="dateApplied" type="date" />
-        <select id="status">
-          <option value="Applied">Applied</option>
-          <option value="Interview">Interview</option>
-          <option value="Offer">Offer</option>
-          <option value="Rejected">Rejected</option>
-        </select>
-        <button type="submit">Add / Save</button>
+    <section class="card form-card">
+      <h2>Add / Edit Application</h2>
+      <form id="appForm">
+        <input type="hidden" id="id">
+        <label>Date Applied
+          <input type="date" id="dateApplied">
+        </label>
+        <label>Job Title
+          <input id="jobTitle" placeholder="Job Title">
+        </label>
+        <label>Company / Client
+          <input id="company" placeholder="Company or Client">
+        </label>
+        <label>Platform
+          <input id="platform" placeholder="e.g. LinkedIn, Indeed">
+        </label>
+        <label>Status
+          <select id="status">
+            <option>Applied</option>
+            <option>Interview</option>
+            <option>Offer</option>
+            <option>Rejected</option>
+            <option>Other</option>
+          </select>
+        </label>
+        <label>Link Job Portal
+          <input id="link" placeholder="https://...">
+        </label>
+        <div class="btn-row">
+          <button type="submit" id="saveBtn">Save</button>
+          <button type="button" id="resetBtn">Reset</button>
+        </div>
       </form>
+    </section>
 
-      <div class="search-row">
-        <input id="searchInput" placeholder="Search company or role" />
+    <section class="card table-card">
+      <h2>Applications</h2>
+      <div class="controls">
+        <input id="search" placeholder="Search title, company or platform">
         <select id="filterStatus">
           <option value="">All statuses</option>
-          <option value="Applied">Applied</option>
-          <option value="Interview">Interview</option>
-          <option value="Offer">Offer</option>
-          <option value="Rejected">Rejected</option>
+          <option>Applied</option>
+          <option>Interview</option>
+          <option>Offer</option>
+          <option>Rejected</option>
         </select>
       </div>
 
-      <table id="jobsTable" class="jobs-table">
+      <table id="appsTable">
         <thead>
-          <tr><th>Company</th><th>Role</th><th>Date</th><th>Status</th><th>Actions</th></tr>
+          <tr>
+            <th>Date</th>
+            <th>Job Title</th>
+            <th>Company</th>
+            <th>Platform</th>
+            <th>Status</th>
+            <th>Link</th>
+            <th>Actions</th>
+          </tr>
         </thead>
         <tbody></tbody>
       </table>
-
-      <div class="small muted">All data stored locally in your browser (localStorage).</div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <small>Built with ♥ — Export or host anywhere.</small>
+    <small>Powered by Google Sheets + Apps Script</small>
   </footer>
 
   <script src="script.js"></script>
